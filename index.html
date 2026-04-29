@@ -17,10 +17,6 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:#f5
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 .btn.primary{background:#fff;color:#4a5a10}
 .btn.primary:hover{background:#f0f4e0}
-.warn-banner{background:#fff3cd;color:#7a5d00;padding:14px 20px;font-size:13px;line-height:1.5;border-bottom:2px solid #f0d878;flex-shrink:0;display:none}
-.warn-banner.visible{display:block}
-.warn-banner h3{font-size:14px;margin-bottom:6px;color:#5a4400}
-.warn-banner code{background:#f0d878;padding:1px 6px;border-radius:3px;font-family:monospace;font-size:12px}
 .main{flex:1;display:flex;position:relative;overflow:hidden}
 .canvas-wrap{flex:1;position:relative;background:#fafafa}
 #canvas-container{position:absolute;inset:0}
@@ -62,16 +58,6 @@ canvas{display:block}
     </div>
   </div>
 
-  <div class="warn-banner" id="warn-banner">
-    <h3>⚠ Para abrir DWG, sube este HTML a GitHub Pages</h3>
-    <p>El motor DWG (WebAssembly) no funciona abriendo el HTML con doble clic; necesita un servidor web. Tienes dos opciones:</p>
-    <ol style="margin-left:20px;margin-top:6px">
-      <li><strong>GitHub Pages (recomendado):</strong> sube este archivo a tu repo de <code>attrapi</code> y abre la URL <code>https://attrapi.github.io/&lt;repo&gt;/</code></li>
-      <li><strong>Servidor local:</strong> en una terminal, en la carpeta del HTML, ejecuta <code>python -m http.server 8000</code> y abre <code>http://localhost:8000</code></li>
-    </ol>
-    <p style="margin-top:6px">Mientras, esta versión local sí abre <strong>archivos DXF</strong>.</p>
-  </div>
-
   <div class="main">
     <div class="canvas-wrap">
       <div id="canvas-container"></div>
@@ -79,10 +65,11 @@ canvas{display:block}
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
         <h2>Arrastra un DWG o DXF aquí</h2>
         <p>El archivo se procesa localmente, nunca sale de tu equipo.</p>
+        <p style="margin-top:12px;font-size:11px;color:#999">Tip: la primera vez que abras un DWG se descargará el motor (~9 MB). Después queda en caché y carga al instante.</p>
         <div style="margin-top:14px">
           <span class="pill">DWG nativo</span>
           <span class="pill">DXF</span>
-          <span class="pill">Sin servidor</span>
+          <span class="pill">100% local</span>
         </div>
       </div>
       <div class="loader hidden" id="loader">
@@ -94,7 +81,7 @@ canvas{display:block}
   </div>
   <div class="status-bar">
     <div id="status-left">Cargando librerías…</div>
-    <div style="font-size:10px;color:#999">three.js + dxf-parser + libredwg-web</div>
+    <div style="font-size:10px;color:#999">three.js + dxf-parser + libredwg-web@0.6.10</div>
   </div>
   <button class="console-toggle" onclick="toggleConsole()">Ver registro</button>
   <div class="console hidden" id="console"></div>
@@ -110,7 +97,7 @@ canvas{display:block}
   });
 })();
 
-// Mini-consola visible
+// Mini-consola
 var consoleBox = document.getElementById('console');
 function logLine(msg, cls){
   var div = document.createElement('div');
@@ -130,23 +117,17 @@ window.toggleConsole = toggleConsole;
 window.addEventListener('error', function(e){ logLine('ERROR: ' + e.message, 'err'); consoleBox.classList.remove('hidden'); });
 window.addEventListener('unhandledrejection', function(e){ logLine('PROMESA RECHAZADA: ' + (e.reason && e.reason.message || e.reason), 'err'); consoleBox.classList.remove('hidden'); });
 
-// Detectar protocolo
-var isFileProtocol = (location.protocol === 'file:');
-if (isFileProtocol) {
-  document.getElementById('warn-banner').classList.add('visible');
-  logLine('Protocolo file:// — DWG no disponible. Usa GitHub Pages o servidor local.', 'warn');
-} else {
-  logLine('Protocolo ' + location.protocol + ' — DWG disponible', 'ok');
-}
+logLine('Visor inicializado · protocolo: ' + location.protocol, 'info');
 </script>
 
+<!-- three.js + dxf-parser (ligeros, cargan rápido) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
 
 <script>
 var librariesOK = (typeof THREE !== 'undefined') && (typeof DxfParser !== 'undefined');
 if (typeof THREE === 'undefined') logLine('three.js NO cargó', 'err');
-else logLine('three.js cargado: r' + THREE.REVISION, 'ok');
+else logLine('three.js: r' + THREE.REVISION, 'ok');
 if (typeof DxfParser === 'undefined') logLine('dxf-parser NO cargó', 'err');
 else logLine('dxf-parser cargado', 'ok');
 
@@ -330,78 +311,151 @@ function fitView(){
   camera.updateProjectionMatrix();
 }
 
-// ==== libredwg-web (carga dinámica solo cuando se necesita) ====
+// ==== libredwg-web — carga lazy del UMD bundle ====
 var libredwgInstance = null;
+var libredwgLoading = null;
+
+function loadScript(src){
+  return new Promise(function(resolve, reject){
+    var existing = document.querySelector('script[data-libredwg]');
+    if (existing) {
+      if (existing.dataset.loaded === 'true') resolve();
+      else {
+        existing.addEventListener('load', function(){ resolve(); });
+        existing.addEventListener('error', function(){ reject(new Error('Falló script')); });
+      }
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = src;
+    s.dataset.libredwg = 'true';
+    s.onload = function(){ s.dataset.loaded = 'true'; resolve(); };
+    s.onerror = function(){ reject(new Error('No se pudo cargar ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
 async function getLibreDwg(){
   if (libredwgInstance) return libredwgInstance;
-  if (isFileProtocol) throw new Error('Necesitas servir el visor desde HTTP, no abrirlo con doble clic');
+  if (libredwgLoading) return await libredwgLoading;
 
-  showLoader('Descargando motor DWG…', 'WebAssembly ~3 MB · primera vez');
-  logLine('Importando libredwg-web desde CDN…', 'info');
+  libredwgLoading = (async function(){
+    showLoader('Descargando motor DWG…', 'WebAssembly ~9 MB · solo la primera vez');
+    logLine('Cargando libredwg-web (UMD bundle)…', 'info');
 
-  // Probar varias URLs de CDN
-  var urls = [
-    'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@latest/dist/index.js',
-    'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web/dist/index.js',
-    'https://unpkg.com/@mlightcad/libredwg-web@latest/dist/index.js'
-  ];
+    // URLs candidatas (versión específica + UMD = más confiable)
+    var urls = [
+      'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.6.10/dist/libredwg-web.umd.cjs',
+      'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.4.6/dist/libredwg-web.umd.cjs',
+      'https://unpkg.com/@mlightcad/libredwg-web@0.6.10/dist/libredwg-web.umd.cjs',
+      'https://unpkg.com/@mlightcad/libredwg-web@0.4.6/dist/libredwg-web.umd.cjs'
+    ];
 
-  var mod = null, lastErr = null;
-  for (var i = 0; i < urls.length; i++) {
-    try {
-      logLine('Probando: ' + urls[i], 'info');
-      mod = await import(/* @vite-ignore */ urls[i]);
-      logLine('Cargado desde ' + urls[i], 'ok');
-      break;
-    } catch (err) {
-      logLine('Falló ' + urls[i] + ': ' + err.message, 'warn');
-      lastErr = err;
+    var loaded = false, lastErr = null;
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        logLine('Probando: ' + urls[i], 'info');
+        await loadScript(urls[i]);
+        logLine('✓ Cargado: ' + urls[i], 'ok');
+        loaded = true;
+        break;
+      } catch (err) {
+        logLine('Falló: ' + err.message, 'warn');
+        lastErr = err;
+      }
     }
-  }
-  if (!mod) throw lastErr || new Error('No se pudo cargar libredwg-web');
+    if (!loaded) throw lastErr || new Error('Ninguna URL del CDN respondió');
 
-  logLine('Exportaciones: ' + Object.keys(mod).join(', '), 'info');
-  showLoader('Inicializando motor…', 'Compilando WebAssembly');
+    // El UMD bundle expone una variable global. Probamos varios nombres conocidos.
+    var globalNames = ['libredwgWeb', 'LibreDwgWeb', 'libredwg', 'LibreDWG', 'libredwg_web'];
+    var pkg = null;
+    for (var j = 0; j < globalNames.length; j++) {
+      if (window[globalNames[j]]) {
+        pkg = window[globalNames[j]];
+        logLine('Variable global encontrada: window.' + globalNames[j], 'ok');
+        break;
+      }
+    }
+    if (!pkg) {
+      // Buscar cualquier global nuevo que tenga LibreDwg adentro
+      var keys = Object.keys(window);
+      var candidates = keys.filter(function(k){
+        try { return window[k] && (window[k].LibreDwg || window[k].createModule); }
+        catch(e){ return false; }
+      });
+      logLine('Candidatos en window: ' + candidates.join(', '), 'info');
+      if (candidates.length > 0) {
+        pkg = window[candidates[0]];
+        logLine('Usando window.' + candidates[0], 'ok');
+      } else {
+        throw new Error('UMD cargado pero no expone variable global esperada. Globals nuevos: ninguno con LibreDwg/createModule.');
+      }
+    }
 
-  var LibreDwgClass = mod.LibreDwg || (mod.default && mod.default.LibreDwg) || mod.default;
-  if (!LibreDwgClass) throw new Error('Clase LibreDwg no encontrada en el módulo');
+    logLine('Exportaciones disponibles: ' + Object.keys(pkg).join(', '), 'info');
 
-  if (typeof LibreDwgClass.create === 'function') {
-    libredwgInstance = await LibreDwgClass.create();
-  } else if (typeof LibreDwgClass === 'function') {
-    libredwgInstance = await new LibreDwgClass();
-  } else {
-    libredwgInstance = LibreDwgClass;
-  }
+    var LibreDwgClass = pkg.LibreDwg || pkg.default && pkg.default.LibreDwg;
+    if (!LibreDwgClass) throw new Error('Clase LibreDwg no encontrada. Disponibles: ' + Object.keys(pkg).join(', '));
 
-  logLine('Motor DWG listo. Métodos: ' + Object.keys(libredwgInstance).slice(0, 20).join(', '), 'ok');
-  return libredwgInstance;
+    showLoader('Inicializando WebAssembly…', 'Compilando motor DWG');
+    var instance;
+    if (typeof LibreDwgClass.create === 'function') {
+      instance = await LibreDwgClass.create();
+    } else if (typeof LibreDwgClass === 'function') {
+      instance = await new LibreDwgClass();
+    } else {
+      instance = LibreDwgClass;
+    }
+
+    var methods = [];
+    for (var k in instance) { if (typeof instance[k] === 'function') methods.push(k); }
+    logLine('Motor DWG listo. Métodos: ' + methods.slice(0, 15).join(', '), 'ok');
+
+    libredwgInstance = instance;
+    return instance;
+  })();
+
+  return await libredwgLoading;
 }
 
 async function loadDWG(arrayBuffer, fileName){
   try {
     var lib = await getLibreDwg();
-    showLoader('Convirtiendo DWG a DXF…', 'Esto puede tardar segundos');
+    showLoader('Convirtiendo DWG a DXF…', 'Esto puede tardar varios segundos');
     logLine('Procesando ' + fileName + '…', 'info');
 
     var u8 = new Uint8Array(arrayBuffer);
     var dxfText = null;
 
+    // Intentar varios métodos según la versión
     if (typeof lib.convertDwg2Dxf === 'function') {
+      logLine('Usando lib.convertDwg2Dxf()', 'info');
       dxfText = lib.convertDwg2Dxf(u8);
     } else if (typeof lib.dwg_read_data === 'function') {
+      logLine('Usando lib.dwg_read_data() + lib.dwg_to_dxf()', 'info');
+      // Dwg_File_Type.DWG = 0
       var dwg = lib.dwg_read_data(u8, 0);
-      if (typeof lib.dwg_to_dxf === 'function') dxfText = lib.dwg_to_dxf(dwg);
-      else if (typeof lib.convert_dwg_to_dxf === 'function') dxfText = lib.convert_dwg_to_dxf(dwg);
-      else throw new Error('Métodos disponibles: ' + Object.keys(lib).join(', '));
+      if (dwg && dwg.error) throw new Error('Error leyendo DWG, código: ' + dwg.error);
+      var dwgPtr = dwg && dwg.data !== undefined ? dwg.data : dwg;
+      if (typeof lib.dwg_to_dxf === 'function') dxfText = lib.dwg_to_dxf(dwgPtr);
+      else if (typeof lib.convert_dwg_to_dxf === 'function') dxfText = lib.convert_dwg_to_dxf(dwgPtr);
+      else throw new Error('La librería leyó el DWG pero no tiene método para convertirlo a DXF.');
+      // Liberar memoria
+      if (typeof lib.dwg_free === 'function' && dwgPtr) {
+        try { lib.dwg_free(dwgPtr); } catch(e) {}
+      }
     } else {
-      throw new Error('Métodos disponibles: ' + Object.keys(lib).join(', '));
+      var availableMethods = [];
+      for (var k in lib) { if (typeof lib[k] === 'function') availableMethods.push(k); }
+      throw new Error('Método de conversión no encontrado. Disponibles: ' + availableMethods.slice(0, 20).join(', '));
     }
 
-    if (!dxfText || dxfText.length < 100) throw new Error('La conversión devolvió un DXF inválido');
-    logLine('DWG → DXF (' + dxfText.length + ' chars)', 'ok');
+    if (!dxfText || dxfText.length < 100) {
+      throw new Error('La conversión devolvió un DXF inválido (longitud: ' + (dxfText ? dxfText.length : 0) + ')');
+    }
+    logLine('DWG → DXF (' + dxfText.length + ' caracteres)', 'ok');
 
-    showLoader('Renderizando…');
+    showLoader('Renderizando dibujo…');
     var parser = new DxfParser();
     var dxf = parser.parseSync(dxfText);
     hideLoader();
@@ -411,7 +465,7 @@ async function loadDWG(arrayBuffer, fileName){
     hideLoader();
     logLine('Error con DWG: ' + err.message, 'err');
     consoleBox.classList.remove('hidden');
-    alert('No se pudo abrir el DWG.\n\n' + err.message + '\n\nVer "Ver registro" para detalles.');
+    alert('No se pudo abrir el DWG.\n\n' + err.message + '\n\nAbre "Ver registro" abajo a la derecha para más detalles.');
   }
 }
 
@@ -440,16 +494,6 @@ function handleFile(file){
     };
     reader.readAsText(file);
   } else if (name.endsWith('.dwg')) {
-    if (isFileProtocol) {
-      alert('Para abrir DWG necesitas servir el visor desde HTTP.\n\n' +
-            'Opciones:\n' +
-            '1) Súbelo a tu repo de GitHub Pages (lo más simple).\n' +
-            '2) En una terminal, en la carpeta del HTML:\n' +
-            '   python -m http.server 8000\n' +
-            '   Luego abre http://localhost:8000\n\n' +
-            'Mientras tanto, este visor sí abre archivos DXF localmente.');
-      return;
-    }
     showLoader('Leyendo DWG…');
     var r2 = new FileReader();
     r2.onload = function(e){ loadDWG(e.target.result, file.name); };
