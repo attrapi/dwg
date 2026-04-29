@@ -3,61 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visor DWG / DXF | ATTRAPI</title>
-<meta name="description" content="Visor web de archivos DWG y DXF, sin servidor. Funciona 100% en el navegador.">
+<title>Visor DWG | ATTRAPI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:#f5f5f5;color:#222;overflow:hidden}
 .app{display:flex;flex-direction:column;height:100vh}
-.header{background:linear-gradient(135deg,#6b7a1e,#4a5a10);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:10}
+.header{background:linear-gradient(135deg,#6b7a1e,#4a5a10);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:10;flex-shrink:0}
 .header h1{font-size:17px;font-weight:600}
 .header .sub{font-size:11px;opacity:0.85;margin-top:2px}
-.toolbar{display:flex;gap:8px;align-items:center}
-.btn{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:background 0.2s;font-weight:600}
+.toolbar{display:flex;gap:8px}
+.btn{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.35);color:#fff;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
 .btn:hover{background:rgba(255,255,255,0.35)}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 .btn.primary{background:#fff;color:#4a5a10}
 .btn.primary:hover{background:#f0f4e0}
+.warn-banner{background:#fff3cd;color:#7a5d00;padding:14px 20px;font-size:13px;line-height:1.5;border-bottom:2px solid #f0d878;flex-shrink:0;display:none}
+.warn-banner.visible{display:block}
+.warn-banner h3{font-size:14px;margin-bottom:6px;color:#5a4400}
+.warn-banner code{background:#f0d878;padding:1px 6px;border-radius:3px;font-family:monospace;font-size:12px}
 .main{flex:1;display:flex;position:relative;overflow:hidden}
-.sidebar{width:240px;background:#fff;border-right:1px solid #ddd;overflow-y:auto;padding:14px;font-size:12px}
-.sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#666;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee}
-.sidebar h3:not(:first-child){margin-top:18px}
-.info-row{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
-.info-key{color:#888}
-.info-val{color:#222;font-weight:500;text-align:right;max-width:140px;word-break:break-all}
-.layer-item{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;font-size:11px}
-.layer-item input{cursor:pointer}
-.layer-color{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-.layer-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .canvas-wrap{flex:1;position:relative;background:#fafafa}
-#canvas{position:absolute;top:0;left:0;right:0;bottom:0}
-.dropzone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px dashed #aaa;margin:20px;border-radius:14px;text-align:center;padding:40px;background:#fff;transition:all 0.2s;z-index:5}
+#canvas-container{position:absolute;inset:0}
+canvas{display:block}
+.dropzone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px dashed #aaa;margin:20px;border-radius:14px;text-align:center;padding:40px;background:#fff;z-index:5;pointer-events:none}
 .dropzone.dragover{border-color:#6b7a1e;background:#f0f4e0}
 .dropzone svg{width:64px;height:64px;fill:#6b7a1e;margin-bottom:14px;opacity:0.6}
 .dropzone h2{font-size:18px;color:#333;margin-bottom:8px}
-.dropzone p{font-size:13px;color:#666;max-width:480px;line-height:1.5}
-.dropzone .formats{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.dropzone .pill{background:#f0f4e0;color:#4a5a10;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600}
+.dropzone p{font-size:13px;color:#666;max-width:520px;line-height:1.5;margin-bottom:8px}
+.dropzone .pill{display:inline-block;background:#f0f4e0;color:#4a5a10;padding:4px 12px;border-radius:14px;font-size:11px;font-weight:600;margin:4px 4px 0 0}
 .loader{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.95);z-index:6;flex-direction:column;gap:14px}
 .loader.hidden{display:none}
 .spinner{width:40px;height:40px;border:3px solid #ddd;border-top-color:#6b7a1e;border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loader-text{font-size:13px;color:#555;font-weight:500}
-.error{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;flex-direction:column;gap:14px;background:#fff;z-index:6;text-align:center}
-.error.hidden{display:none}
-.error svg{width:48px;height:48px;fill:#d32f2f}
-.error h3{font-size:16px;color:#c62828}
-.error p{font-size:13px;color:#555;max-width:520px;line-height:1.5}
-.status-bar{background:#fff;border-top:1px solid #ddd;padding:6px 14px;font-size:11px;color:#666;display:flex;justify-content:space-between;align-items:center}
-.status-bar .ok{color:#2e7d32;font-weight:600}
-.status-bar .warn{color:#ef6c00;font-weight:600}
-@media (max-width:700px){
-.sidebar{position:absolute;top:0;left:-240px;height:100%;z-index:8;transition:left 0.3s;box-shadow:2px 0 8px rgba(0,0,0,0.15)}
-.sidebar.open{left:0}
-.header h1{font-size:14px}
-.header .sub{display:none}
-.btn{padding:5px 10px;font-size:11px}
-}
+.loader-sub{font-size:11px;color:#888}
+.console{position:absolute;bottom:0;left:0;right:0;background:#1e1e1e;color:#d4d4d4;font-family:'Consolas','Monaco',monospace;font-size:11px;max-height:200px;overflow-y:auto;padding:8px 14px;z-index:20;border-top:2px solid #6b7a1e;line-height:1.5}
+.console.hidden{display:none}
+.console .line{padding:2px 0}
+.console .info{color:#9cdcfe}
+.console .ok{color:#4ec9b0}
+.console .warn{color:#dcdcaa}
+.console .err{color:#f48771}
+.console-toggle{position:absolute;bottom:8px;right:14px;background:#1e1e1e;color:#d4d4d4;border:1px solid #444;padding:4px 10px;font-size:10px;cursor:pointer;border-radius:4px;z-index:21;font-family:monospace}
+.status-bar{background:#fff;border-top:1px solid #ddd;padding:6px 14px;font-size:11px;color:#666;display:flex;justify-content:space-between;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -65,7 +53,7 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:#f5
   <div class="header">
     <div>
       <h1>Visor DWG / DXF</h1>
-      <div class="sub">Sin servidor — 100% en el navegador</div>
+      <div class="sub">Lectura nativa de DWG con WebAssembly</div>
     </div>
     <div class="toolbar">
       <button class="btn" id="btn-zoom-fit" disabled>Encuadrar</button>
@@ -73,208 +61,421 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:#f5
       <input type="file" id="file-input" accept=".dwg,.dxf" style="display:none">
     </div>
   </div>
+
+  <div class="warn-banner" id="warn-banner">
+    <h3>⚠ Para abrir DWG, sube este HTML a GitHub Pages</h3>
+    <p>El motor DWG (WebAssembly) no funciona abriendo el HTML con doble clic; necesita un servidor web. Tienes dos opciones:</p>
+    <ol style="margin-left:20px;margin-top:6px">
+      <li><strong>GitHub Pages (recomendado):</strong> sube este archivo a tu repo de <code>attrapi</code> y abre la URL <code>https://attrapi.github.io/&lt;repo&gt;/</code></li>
+      <li><strong>Servidor local:</strong> en una terminal, en la carpeta del HTML, ejecuta <code>python -m http.server 8000</code> y abre <code>http://localhost:8000</code></li>
+    </ol>
+    <p style="margin-top:6px">Mientras, esta versión local sí abre <strong>archivos DXF</strong>.</p>
+  </div>
+
   <div class="main">
-    <div class="sidebar" id="sidebar">
-      <h3>Información</h3>
-      <div id="info-content">
-        <div class="info-row"><span class="info-key">Archivo</span><span class="info-val">—</span></div>
-      </div>
-      <h3>Capas</h3>
-      <div id="layers-list">
-        <div style="color:#999;font-size:11px;font-style:italic">Sin archivo cargado</div>
-      </div>
-    </div>
     <div class="canvas-wrap">
-      <div id="canvas"></div>
+      <div id="canvas-container"></div>
       <div class="dropzone" id="dropzone">
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        <h2>Arrastra un archivo aquí</h2>
-        <p>O presiona <strong>Abrir archivo</strong> arriba a la derecha. El archivo se procesa localmente, nunca sale de tu equipo.</p>
-        <div class="formats">
-          <span class="pill">DXF (recomendado)</span>
-          <span class="pill">DWG (experimental)</span>
+        <h2>Arrastra un DWG o DXF aquí</h2>
+        <p>El archivo se procesa localmente, nunca sale de tu equipo.</p>
+        <div style="margin-top:14px">
+          <span class="pill">DWG nativo</span>
+          <span class="pill">DXF</span>
+          <span class="pill">Sin servidor</span>
         </div>
       </div>
       <div class="loader hidden" id="loader">
         <div class="spinner"></div>
-        <div class="loader-text" id="loader-text">Procesando archivo…</div>
-      </div>
-      <div class="error hidden" id="error">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-        <h3 id="error-title">No se pudo abrir el archivo</h3>
-        <p id="error-msg"></p>
-        <button class="btn primary" onclick="resetView()">Probar otro archivo</button>
+        <div class="loader-text" id="loader-text">Procesando…</div>
+        <div class="loader-sub" id="loader-sub"></div>
       </div>
     </div>
   </div>
   <div class="status-bar">
-    <div id="status-left">Listo</div>
-    <div id="status-right" style="font-size:10px;color:#999">DXF: parser nativo · DWG: libredwg-web (WebAssembly)</div>
+    <div id="status-left">Cargando librerías…</div>
+    <div style="font-size:10px;color:#999">three.js + dxf-parser + libredwg-web</div>
   </div>
+  <button class="console-toggle" onclick="toggleConsole()">Ver registro</button>
+  <div class="console hidden" id="console"></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "dxf-viewer": "https://cdn.jsdelivr.net/npm/dxf-viewer@1.1.5/dist/dxf-viewer.module.min.js",
-    "@mlightcad/libredwg-web": "https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@0.0.18/dist/index.mjs"
-  }
+<script>
+// Bloqueo inmediato de drag&drop del navegador
+(function(){
+  function block(e){ e.preventDefault(); e.stopPropagation(); }
+  ['dragenter','dragover','dragleave','drop'].forEach(function(evt){
+    window.addEventListener(evt, block, false);
+    document.addEventListener(evt, block, false);
+  });
+})();
+
+// Mini-consola visible
+var consoleBox = document.getElementById('console');
+function logLine(msg, cls){
+  var div = document.createElement('div');
+  div.className = 'line ' + (cls || 'info');
+  div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  consoleBox.appendChild(div);
+  consoleBox.scrollTop = consoleBox.scrollHeight;
+  console.log('[VISOR]', msg);
+}
+function toggleConsole(){
+  consoleBox.classList.toggle('hidden');
+  document.querySelector('.console-toggle').textContent =
+    consoleBox.classList.contains('hidden') ? 'Ver registro' : 'Ocultar registro';
+}
+window.toggleConsole = toggleConsole;
+
+window.addEventListener('error', function(e){ logLine('ERROR: ' + e.message, 'err'); consoleBox.classList.remove('hidden'); });
+window.addEventListener('unhandledrejection', function(e){ logLine('PROMESA RECHAZADA: ' + (e.reason && e.reason.message || e.reason), 'err'); consoleBox.classList.remove('hidden'); });
+
+// Detectar protocolo
+var isFileProtocol = (location.protocol === 'file:');
+if (isFileProtocol) {
+  document.getElementById('warn-banner').classList.add('visible');
+  logLine('Protocolo file:// — DWG no disponible. Usa GitHub Pages o servidor local.', 'warn');
+} else {
+  logLine('Protocolo ' + location.protocol + ' — DWG disponible', 'ok');
 }
 </script>
-<script type="module">
-import { DxfViewer } from 'dxf-viewer';
 
-const $ = id => document.getElementById(id);
-const canvas = $('canvas');
-const dropzone = $('dropzone');
-const loader = $('loader');
-const loaderText = $('loader-text');
-const errorBox = $('error');
-const errorTitle = $('error-title');
-const errorMsg = $('error-msg');
-const fileInput = $('file-input');
-const statusLeft = $('status-left');
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
 
-let viewer = null;
+<script>
+var librariesOK = (typeof THREE !== 'undefined') && (typeof DxfParser !== 'undefined');
+if (typeof THREE === 'undefined') logLine('three.js NO cargó', 'err');
+else logLine('three.js cargado: r' + THREE.REVISION, 'ok');
+if (typeof DxfParser === 'undefined') logLine('dxf-parser NO cargó', 'err');
+else logLine('dxf-parser cargado', 'ok');
 
-function showLoader(txt){ loaderText.textContent = txt || 'Procesando…'; loader.classList.remove('hidden'); errorBox.classList.add('hidden'); dropzone.style.display = 'none'; }
-function hideLoader(){ loader.classList.add('hidden'); }
-function showError(title, msg){ errorTitle.textContent = title; errorMsg.innerHTML = msg; errorBox.classList.remove('hidden'); loader.classList.add('hidden'); }
-window.resetView = function(){ errorBox.classList.add('hidden'); loader.classList.add('hidden'); dropzone.style.display = 'flex'; statusLeft.textContent = 'Listo'; };
-
-function ensureViewer(){
-  if (!viewer) {
-    viewer = new DxfViewer(canvas, { clearColor: new THREE.Color('#fafafa'), autoResize: true, colorCorrection: true });
-  }
-  return viewer;
+if (!librariesOK) {
+  document.getElementById('status-left').innerHTML = '<span style="color:#c00">⚠ Verifica conexión a internet</span>';
+  consoleBox.classList.remove('hidden');
+} else {
+  document.getElementById('status-left').textContent = 'Listo — arrastra un DWG/DXF';
 }
 
-async function loadDXF(text, fileName){
-  showLoader('Renderizando DXF…');
-  try {
-    const v = ensureViewer();
-    const blob = new Blob([text], { type: 'application/dxf' });
-    const url = URL.createObjectURL(blob);
-    await v.Load({ url, fonts: [], workerFactory: null });
-    URL.revokeObjectURL(url);
-    populateInfo(fileName, text.length, 'DXF');
-    populateLayers(v);
-    $('btn-zoom-fit').disabled = false;
-    $('btn-zoom-fit').onclick = () => v.FitView();
-    hideLoader();
-    statusLeft.innerHTML = '<span class="ok">✓ DXF cargado correctamente</span>';
-  } catch (err) {
-    console.error(err);
-    showError('Error al renderizar el DXF', `El archivo se leyó pero la librería no pudo dibujarlo.<br><br><code style="font-size:11px;background:#f5f5f5;padding:4px 8px;border-radius:4px">${err.message || err}</code>`);
+// ==== three.js setup ====
+var scene, camera, renderer, drawingGroup;
+var canvasContainer = document.getElementById('canvas-container');
+var bounds = null;
+
+function initThree(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xfafafa);
+  var w = canvasContainer.clientWidth, h = canvasContainer.clientHeight;
+  camera = new THREE.OrthographicCamera(-w/2, w/2, h/2, -h/2, -1000, 1000);
+  camera.position.z = 10;
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  canvasContainer.appendChild(renderer.domElement);
+  drawingGroup = new THREE.Group();
+  scene.add(drawingGroup);
+  setupControls();
+  window.addEventListener('resize', function(){
+    var w2 = canvasContainer.clientWidth, h2 = canvasContainer.clientHeight;
+    camera.left = -w2/2; camera.right = w2/2; camera.top = h2/2; camera.bottom = -h2/2;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w2, h2);
+  });
+  (function loop(){ requestAnimationFrame(loop); renderer.render(scene, camera); })();
+}
+
+function setupControls(){
+  var dom = renderer.domElement, dragging = false, lastX = 0, lastY = 0;
+  dom.addEventListener('mousedown', function(e){ dragging = true; lastX = e.clientX; lastY = e.clientY; dom.style.cursor = 'grabbing'; });
+  window.addEventListener('mousemove', function(e){
+    if (!dragging) return;
+    var scale = (camera.right - camera.left) / canvasContainer.clientWidth;
+    camera.position.x -= (e.clientX - lastX) * scale;
+    camera.position.y += (e.clientY - lastY) * scale;
+    lastX = e.clientX; lastY = e.clientY;
+  });
+  window.addEventListener('mouseup', function(){ dragging = false; dom.style.cursor = 'grab'; });
+  dom.style.cursor = 'grab';
+  dom.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var f = e.deltaY > 0 ? 1.15 : 1/1.15;
+    camera.left *= f; camera.right *= f; camera.top *= f; camera.bottom *= f;
+    camera.updateProjectionMatrix();
+  }, { passive: false });
+}
+
+if (librariesOK) initThree();
+
+// ==== render DXF ====
+function renderDXF(dxf, fileName){
+  while (drawingGroup.children.length > 0) {
+    var obj = drawingGroup.children[0];
+    drawingGroup.remove(obj);
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) obj.material.dispose();
   }
+  var entities = dxf.entities || [];
+  logLine('Entidades: ' + entities.length, 'info');
+  if (entities.length === 0) { logLine('Archivo vacío', 'warn'); return; }
+
+  bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  var renderedCount = 0, skippedTypes = {};
+
+  entities.forEach(function(ent){
+    try {
+      var lines = entityToLines(ent);
+      if (!lines || lines.length === 0) { skippedTypes[ent.type] = (skippedTypes[ent.type]||0)+1; return; }
+      var color = entityColor(ent, dxf);
+      lines.forEach(function(segments){
+        var pts = [];
+        segments.forEach(function(p){
+          pts.push(new THREE.Vector3(p[0], p[1], 0));
+          if (p[0] < bounds.minX) bounds.minX = p[0];
+          if (p[0] > bounds.maxX) bounds.maxX = p[0];
+          if (p[1] < bounds.minY) bounds.minY = p[1];
+          if (p[1] > bounds.maxY) bounds.maxY = p[1];
+        });
+        if (pts.length < 2) return;
+        var geom = new THREE.BufferGeometry().setFromPoints(pts);
+        var line = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: color }));
+        drawingGroup.add(line);
+        renderedCount++;
+      });
+    } catch (err) { logLine('Error en ' + ent.type + ': ' + err.message, 'warn'); }
+  });
+
+  logLine('Renderizadas ' + renderedCount + ' geometrías', 'ok');
+  Object.keys(skippedTypes).forEach(function(t){ logLine('No soportado: ' + t + ' (' + skippedTypes[t] + ')', 'warn'); });
+
+  if (renderedCount > 0) {
+    fitView();
+    document.getElementById('btn-zoom-fit').disabled = false;
+    document.getElementById('btn-zoom-fit').onclick = fitView;
+    document.getElementById('dropzone').style.display = 'none';
+    document.getElementById('status-left').textContent = '✓ ' + fileName + ' · ' + renderedCount + ' entidades';
+  }
+}
+
+function entityToLines(ent){
+  switch (ent.type) {
+    case 'LINE':
+      if (ent.vertices && ent.vertices.length >= 2)
+        return [[[ent.vertices[0].x, ent.vertices[0].y], [ent.vertices[1].x, ent.vertices[1].y]]];
+      return null;
+    case 'LWPOLYLINE': case 'POLYLINE':
+      if (!ent.vertices || ent.vertices.length < 2) return null;
+      var pts = ent.vertices.map(function(v){ return [v.x, v.y]; });
+      if (ent.shape || ent.closed) pts.push(pts[0]);
+      return [pts];
+    case 'CIRCLE': return [arcToPoints(ent.center.x, ent.center.y, ent.radius, 0, Math.PI*2)];
+    case 'ARC':
+      var s = (ent.startAngle||0)*Math.PI/180, e = (ent.endAngle||0)*Math.PI/180;
+      if (e < s) e += Math.PI*2;
+      return [arcToPoints(ent.center.x, ent.center.y, ent.radius, s, e)];
+    case 'ELLIPSE': return [ellipseToPoints(ent)];
+    case 'POINT':
+      var x = ent.position.x, y = ent.position.y, d = 0.5;
+      return [[[x-d,y],[x+d,y]],[[x,y-d],[x,y+d]]];
+    case 'SPLINE':
+      if (ent.controlPoints && ent.controlPoints.length >= 2)
+        return [ent.controlPoints.map(function(p){ return [p.x, p.y]; })];
+      return null;
+    case 'TEXT': case 'MTEXT':
+      var pp = ent.position || ent.startPoint || {x:0,y:0}, dt = 1;
+      return [[[pp.x-dt,pp.y],[pp.x+dt,pp.y]],[[pp.x,pp.y-dt],[pp.x,pp.y+dt]]];
+    default: return null;
+  }
+}
+function arcToPoints(cx, cy, r, sA, eA){
+  var pts = [], steps = Math.max(16, Math.ceil((eA-sA)/(Math.PI/32)));
+  for (var i = 0; i <= steps; i++) { var a = sA + (eA-sA)*(i/steps); pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a)]); }
+  return pts;
+}
+function ellipseToPoints(ent){
+  var cx = ent.center.x, cy = ent.center.y;
+  var mx = ent.majorAxisEndPoint.x, my = ent.majorAxisEndPoint.y;
+  var rMaj = Math.sqrt(mx*mx+my*my), rot = Math.atan2(my, mx);
+  var rMin = rMaj * (ent.axisRatio || 1);
+  var sA = ent.startAngle || 0, eA = ent.endAngle || (Math.PI*2);
+  var pts = [];
+  for (var i = 0; i <= 64; i++) {
+    var t = sA + (eA-sA)*(i/64);
+    var x = rMaj*Math.cos(t), y = rMin*Math.sin(t);
+    pts.push([cx + x*Math.cos(rot) - y*Math.sin(rot), cy + x*Math.sin(rot) + y*Math.cos(rot)]);
+  }
+  return pts;
+}
+function entityColor(ent, dxf){
+  if (ent.color !== undefined && ent.color !== null) return aciToHex(ent.color);
+  if (ent.layer && dxf.tables && dxf.tables.layer && dxf.tables.layer.layers) {
+    var layer = dxf.tables.layer.layers[ent.layer];
+    if (layer && layer.color) return aciToHex(layer.color);
+  }
+  return 0x222222;
+}
+function aciToHex(aci){
+  var ACI = {1:0xff0000,2:0xffff00,3:0x00ff00,4:0x00ffff,5:0x0000ff,6:0xff00ff,7:0x000000,8:0x808080,9:0xc0c0c0};
+  return ACI[aci] || 0x444444;
+}
+function fitView(){
+  if (!bounds || !isFinite(bounds.minX)) return;
+  var w = canvasContainer.clientWidth, h = canvasContainer.clientHeight;
+  var dW = bounds.maxX - bounds.minX, dH = bounds.maxY - bounds.minY;
+  if (dW <= 0 || dH <= 0) return;
+  var scale = Math.max(dW * 1.15 / w, dH * 1.15 / h);
+  camera.left = -w*scale/2; camera.right = w*scale/2;
+  camera.top = h*scale/2; camera.bottom = -h*scale/2;
+  camera.position.x = (bounds.minX + bounds.maxX) / 2;
+  camera.position.y = (bounds.minY + bounds.maxY) / 2;
+  camera.updateProjectionMatrix();
+}
+
+// ==== libredwg-web (carga dinámica solo cuando se necesita) ====
+var libredwgInstance = null;
+async function getLibreDwg(){
+  if (libredwgInstance) return libredwgInstance;
+  if (isFileProtocol) throw new Error('Necesitas servir el visor desde HTTP, no abrirlo con doble clic');
+
+  showLoader('Descargando motor DWG…', 'WebAssembly ~3 MB · primera vez');
+  logLine('Importando libredwg-web desde CDN…', 'info');
+
+  // Probar varias URLs de CDN
+  var urls = [
+    'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web@latest/dist/index.js',
+    'https://cdn.jsdelivr.net/npm/@mlightcad/libredwg-web/dist/index.js',
+    'https://unpkg.com/@mlightcad/libredwg-web@latest/dist/index.js'
+  ];
+
+  var mod = null, lastErr = null;
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      logLine('Probando: ' + urls[i], 'info');
+      mod = await import(/* @vite-ignore */ urls[i]);
+      logLine('Cargado desde ' + urls[i], 'ok');
+      break;
+    } catch (err) {
+      logLine('Falló ' + urls[i] + ': ' + err.message, 'warn');
+      lastErr = err;
+    }
+  }
+  if (!mod) throw lastErr || new Error('No se pudo cargar libredwg-web');
+
+  logLine('Exportaciones: ' + Object.keys(mod).join(', '), 'info');
+  showLoader('Inicializando motor…', 'Compilando WebAssembly');
+
+  var LibreDwgClass = mod.LibreDwg || (mod.default && mod.default.LibreDwg) || mod.default;
+  if (!LibreDwgClass) throw new Error('Clase LibreDwg no encontrada en el módulo');
+
+  if (typeof LibreDwgClass.create === 'function') {
+    libredwgInstance = await LibreDwgClass.create();
+  } else if (typeof LibreDwgClass === 'function') {
+    libredwgInstance = await new LibreDwgClass();
+  } else {
+    libredwgInstance = LibreDwgClass;
+  }
+
+  logLine('Motor DWG listo. Métodos: ' + Object.keys(libredwgInstance).slice(0, 20).join(', '), 'ok');
+  return libredwgInstance;
 }
 
 async function loadDWG(arrayBuffer, fileName){
-  showLoader('Cargando convertidor DWG (WebAssembly)…');
   try {
-    const mod = await import('@mlightcad/libredwg-web');
-    showLoader('Convirtiendo DWG a DXF en el navegador…');
-    const LibreDwgEx = mod.LibreDwgEx || mod.default?.LibreDwgEx || mod.default;
-    if (!LibreDwgEx) throw new Error('No se encontró la clase LibreDwgEx en el módulo');
-    const lib = await LibreDwgEx.create();
-    const u8 = new Uint8Array(arrayBuffer);
-    const dxfText = lib.convertDwg2Dxf(u8);
-    if (!dxfText || dxfText.length < 100) throw new Error('La conversión devolvió un DXF vacío o inválido');
-    statusLeft.innerHTML = '<span class="warn">⚠ DWG convertido a DXF en navegador (puede tener pérdidas)</span>';
-    await loadDXF(dxfText, fileName);
-  } catch (err) {
-    console.error(err);
-    showError('No se pudo leer el DWG',
-      `<strong>DWG es un formato propietario de Autodesk.</strong> El convertidor experimental falló con este archivo:<br><br>
-       <code style="font-size:11px;background:#f5f5f5;padding:4px 8px;border-radius:4px;display:inline-block;margin-bottom:12px">${err.message || err}</code><br><br>
-       <strong>Soluciones recomendadas:</strong><br>
-       • Abre tu DWG en AutoCAD y exporta como <strong>DXF</strong> (Archivo → Guardar como → DXF). Los DXF se ven perfecto.<br>
-       • O usa <a href="https://www.opendesign.com/guestfiles/oda_file_converter" target="_blank" style="color:#1a73e8">ODA File Converter</a> (gratis) para convertir DWG → DXF en lote.`);
-  }
-}
+    var lib = await getLibreDwg();
+    showLoader('Convirtiendo DWG a DXF…', 'Esto puede tardar segundos');
+    logLine('Procesando ' + fileName + '…', 'info');
 
-function populateInfo(fileName, size, type){
-  const sizeKB = (size / 1024).toFixed(1);
-  $('info-content').innerHTML = `
-    <div class="info-row"><span class="info-key">Archivo</span><span class="info-val">${escapeHTML(fileName)}</span></div>
-    <div class="info-row"><span class="info-key">Tipo</span><span class="info-val">${type}</span></div>
-    <div class="info-row"><span class="info-key">Tamaño</span><span class="info-val">${sizeKB} KB</span></div>
-  `;
-}
+    var u8 = new Uint8Array(arrayBuffer);
+    var dxfText = null;
 
-function populateLayers(v){
-  const list = $('layers-list');
-  list.innerHTML = '';
-  try {
-    const layers = v.GetLayers ? v.GetLayers() : [];
-    if (!layers || layers.length === 0) {
-      list.innerHTML = '<div style="color:#999;font-size:11px;font-style:italic">Sin capas detectadas</div>';
-      return;
+    if (typeof lib.convertDwg2Dxf === 'function') {
+      dxfText = lib.convertDwg2Dxf(u8);
+    } else if (typeof lib.dwg_read_data === 'function') {
+      var dwg = lib.dwg_read_data(u8, 0);
+      if (typeof lib.dwg_to_dxf === 'function') dxfText = lib.dwg_to_dxf(dwg);
+      else if (typeof lib.convert_dwg_to_dxf === 'function') dxfText = lib.convert_dwg_to_dxf(dwg);
+      else throw new Error('Métodos disponibles: ' + Object.keys(lib).join(', '));
+    } else {
+      throw new Error('Métodos disponibles: ' + Object.keys(lib).join(', '));
     }
-    layers.forEach(layer => {
-      const row = document.createElement('div');
-      row.className = 'layer-item';
-      const colorHex = '#' + (layer.color || 0x888888).toString(16).padStart(6, '0');
-      row.innerHTML = `
-        <input type="checkbox" checked data-layer="${escapeHTML(layer.name)}">
-        <span class="layer-color" style="background:${colorHex}"></span>
-        <span class="layer-name" title="${escapeHTML(layer.displayName || layer.name)}">${escapeHTML(layer.displayName || layer.name)}</span>
-      `;
-      const cb = row.querySelector('input');
-      cb.addEventListener('change', e => {
-        v.ShowLayer(layer.name, e.target.checked);
-      });
-      list.appendChild(row);
-    });
+
+    if (!dxfText || dxfText.length < 100) throw new Error('La conversión devolvió un DXF inválido');
+    logLine('DWG → DXF (' + dxfText.length + ' chars)', 'ok');
+
+    showLoader('Renderizando…');
+    var parser = new DxfParser();
+    var dxf = parser.parseSync(dxfText);
+    hideLoader();
+    renderDXF(dxf, fileName);
+
   } catch (err) {
-    console.warn('No se pudieron leer las capas:', err);
-    list.innerHTML = '<div style="color:#999;font-size:11px;font-style:italic">No se pudieron leer las capas</div>';
+    hideLoader();
+    logLine('Error con DWG: ' + err.message, 'err');
+    consoleBox.classList.remove('hidden');
+    alert('No se pudo abrir el DWG.\n\n' + err.message + '\n\nVer "Ver registro" para detalles.');
   }
 }
 
-function escapeHTML(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showLoader(text, sub){
+  document.getElementById('loader-text').textContent = text || 'Procesando…';
+  document.getElementById('loader-sub').textContent = sub || '';
+  document.getElementById('loader').classList.remove('hidden');
+}
+function hideLoader(){ document.getElementById('loader').classList.add('hidden'); }
 
-async function handleFile(file){
-  if (!file) return;
-  const name = file.name.toLowerCase();
+// ==== manejo de archivo ====
+function handleFile(file){
+  if (!file || !librariesOK) return;
+  logLine('Archivo: "' + file.name + '" (' + (file.size/1024).toFixed(1) + ' KB)', 'info');
+  var name = file.name.toLowerCase();
+
   if (name.endsWith('.dxf')) {
     showLoader('Leyendo DXF…');
-    const text = await file.text();
-    loadDXF(text, file.name);
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        var dxf = new DxfParser().parseSync(e.target.result);
+        hideLoader();
+        renderDXF(dxf, file.name);
+      } catch (err) { hideLoader(); logLine('Error: ' + err.message, 'err'); consoleBox.classList.remove('hidden'); }
+    };
+    reader.readAsText(file);
   } else if (name.endsWith('.dwg')) {
+    if (isFileProtocol) {
+      alert('Para abrir DWG necesitas servir el visor desde HTTP.\n\n' +
+            'Opciones:\n' +
+            '1) Súbelo a tu repo de GitHub Pages (lo más simple).\n' +
+            '2) En una terminal, en la carpeta del HTML:\n' +
+            '   python -m http.server 8000\n' +
+            '   Luego abre http://localhost:8000\n\n' +
+            'Mientras tanto, este visor sí abre archivos DXF localmente.');
+      return;
+    }
     showLoader('Leyendo DWG…');
-    const buf = await file.arrayBuffer();
-    loadDWG(buf, file.name);
+    var r2 = new FileReader();
+    r2.onload = function(e){ loadDWG(e.target.result, file.name); };
+    r2.readAsArrayBuffer(file);
   } else {
-    showError('Formato no soportado', 'Solo se aceptan archivos <strong>.dwg</strong> o <strong>.dxf</strong>.');
+    alert('Solo se aceptan archivos .dwg o .dxf');
   }
 }
 
-$('btn-open').addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
-
-['dragenter','dragover'].forEach(evt =>
-  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); })
-);
-['dragleave','drop'].forEach(evt =>
-  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); })
-);
-dropzone.addEventListener('drop', e => {
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  handleFile(file);
+document.getElementById('btn-open').addEventListener('click', function(){
+  document.getElementById('file-input').click();
 });
-
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => {
-  if (e.target.id !== 'dropzone' && !dropzone.contains(e.target)) {
-    e.preventDefault();
-    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-  }
+document.getElementById('file-input').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
 });
+window.addEventListener('drop', function(e){
+  var files = e.dataTransfer && e.dataTransfer.files;
+  if (files && files.length > 0) handleFile(files[0]);
+}, false);
+
+var dropzone = document.getElementById('dropzone');
+window.addEventListener('dragenter', function(){ dropzone.classList.add('dragover'); });
+window.addEventListener('dragleave', function(e){ if (e.relatedTarget === null) dropzone.classList.remove('dragover'); });
+window.addEventListener('drop', function(){ dropzone.classList.remove('dragover'); });
+
+logLine('Listo', 'ok');
 </script>
 </body>
 </html>
